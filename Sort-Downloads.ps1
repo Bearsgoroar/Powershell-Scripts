@@ -9,7 +9,7 @@
     Import-Module "C:\PSScripts\Autoload\Get-Torrent.ps1" -Force
 
     $date = Get-Date -format yyyy-MM-dd
-    $apikey = "0cfdef6c6f1639a3e095e60119603558"
+    $apikey = "xxxxxxxxxxxxxxxxx"
     $loglocation = "E:\log.txt"
     $defaultsource = "H:\Downloads"
     $tvdestination = "E:\TV"
