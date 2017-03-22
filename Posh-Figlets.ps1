@@ -78,7 +78,7 @@ function Show-Figlet {
     begin {
         ## Setting font from dynparam if supplied otherwise to ANSI-Shadow
         if($PsBoundParameters["Font"]) { $Font = $PsBoundParameters["Font"] }
-        if(!($PsBoundParameters["Font"])) { $Font = "ANSI-Shadow" }
+        if(!($PsBoundParameters["Font"])) { $Font = "ANSI Shadow" }
 
         ## Custom Colour Arrays
         $RainbowArray = @("DarkRed","Red","Yellow","Green","Blue","Cyan","Magenta","DarkMagenta", "DarkRed", 
@@ -111,7 +111,7 @@ function Show-Figlet {
                 {$_ -match "flf2."} {                 
                     $HardBlank = ($Line -split " ")[0] -replace "flf2.", ""
                     $FontHeight = ($Line -split " ")[1]
-                    $FontWidth = ($Line -split " ")[3] - 2
+                    #$FontWidth = ($Line -split " ")[3] - 2
                     $SkipLines = ($Line -split " ")[5]
                     
                     Write-Verbose -Message "Compare lines:`n $Line `nBlank Character: $HardBlank, Font Height: $FontHeight, Font Width: $FontWidth, Comment Length: $SkipLines"
@@ -127,7 +127,7 @@ function Show-Figlet {
                 }
 
                 ## Extended fonts above 160
-                {$_ -match "^[0-9][0-9][0-9]  "} { 
+                {$_ -match "^[0-9][0-9][0-9]  (NO-BREAK SPACE)"} { 
                     $CharacterCounter = [int]($_ -replace "  .*", "").trim()
                     Write-Verbose "Found Extended Font: $Line new CharacterCounter number is $CharacterCounter" 
                 }
@@ -139,7 +139,7 @@ function Show-Figlet {
 
         ## This is where /u/aXenoWhats comes in
         #This relies on the -notin operator helpfully casting char to string 
-        $UnsupportedChars = ([char[]]$Text | ?{$_ -notin $FigletArray.Keys}) -join ''
+        $UnsupportedChars = ([char[]]$Text | Where-Object {$_ -notin $FigletArray.Keys}) -join ''
         if ((-not $IgnoreUnsupported) -and $UnsupportedChars) {
             throw "The following characters are not supported in the $Font set: $UnsupportedChars. To render, use the -IgnoreUnsupported switch"
         }
@@ -147,7 +147,7 @@ function Show-Figlet {
         #Output text, without linebreaks
         #Could use an array, but I think it would be nice to have enqueue and dequeue and a do-while loop
         $GiantText = New-Object System.Collections.Generic.Queue``1[string[]]
-        [char[]]$Text | foreach {
+        [char[]]$Text | ForEach-Object {
             $GiantText.Enqueue(
                 #Sadly we have to explicitly cast the char back to string to match the key
                 #We also take this opportunity to split each giant letter into a string array
@@ -164,7 +164,7 @@ function Show-Figlet {
         do {
             #Do we need to start a new line?
             $NextChar = $GiantText.Peek()
-            $NextCharWidth = $FontWidth #$NextChar[0].Length
+            $NextCharWidth = $NextChar[0].Length
             if (($CursorPos + $NextCharWidth) -gt $ConsoleWidth) {
                 $GiantLines.Add((New-Object System.Collections.Generic.List``1[string[]]))
                 $CursorPos = 0
@@ -192,9 +192,9 @@ function Show-Figlet {
                 foreach ($Char in $Line) {
                     Write-Host -NoNewline $Char[$i] -ForegroundColor $Colour
                 }
-                
+
                 ## Required *Ominious background noises*
-                Write-Host
+                Write-Host 
             }
         }
     }
@@ -207,11 +207,11 @@ function Show-Figlet {
  \__| |_|   \___| \__,_|  \__| \___|       |_|   |_| \__, | |_| \___|  \__|
                                                      |___/                 
 #>
-
-function Create-Figlet() {
+    
+function Get-Figlet {
 <#
 .Notes
-This was a quick and dirty script. 'Create-Figlet' to get a list of names and 'Create-Figlet -Download $Name' to download the font.
+This was a quick and dirty script. 'Get-Figlet' to get a list of names and 'Get-Figlet -Download $Name' to download the font.
 
 https://github.com/patorjk/figlet.js/tree/master/fonts is a good source apart from figlets.org
 .SYNOPSIS
@@ -219,9 +219,9 @@ Creates a Powershell readable local copy of the figlet font format
 .DESCRIPTION
 Creates a local copy of a figlet font from http://www.figlet.org/
 .EXAMPLE
-Create-Figlet to create a list of fonts
+Get-Figlet to create a list of fonts
 .EXAMPLE
-Create-Figlet -Download Colossal to download
+Get-Figlet -Download Colossal to download
 #>
 
     param(
@@ -233,7 +233,7 @@ Create-Figlet -Download Colossal to download
 
     if($Source) { 
         if($Source -match "https?://github.com/") { $Source = $Source -replace "https?://github.com/", "https://raw.githubusercontent.com/" }
-        if(!($Name)) { Write-Host "You need to supply a name"; Break }
+        if(!($Name)) { Write-Output "You need to supply a name"; Break }
         (Invoke-WebRequest -Uri $Source ).content | Out-File "$InstallPath\$Name.txt"
     }
 
@@ -246,22 +246,22 @@ Create-Figlet -Download Colossal to download
 
         else {
             $Link = "http://www.figlet.org/fontdb.cgi" 
-            (Invoke-WebRequest -Uri $Link).links | Where href -Match "fontdb_example.cgi" | Select innerText
+            (Invoke-WebRequest -Uri $Link).links | Where-Object href -Match "fontdb_example.cgi" | Select-Object innerText
         }
     }
 
     if($Download) {
-        if(!($Name)) { Write-Host "You need to supply a name"; Break }
+        if(!($Name)) { Write-Output "You need to supply a name"; Break }
         $Link = "http://www.figlet.org/fonts/$Name.flf"
         (Invoke-WebRequest -Uri $Link).content | Out-File "$InstallPath\$Name.txt"
-        Write-Host "Added font: $Name to directory: $InstallPath" -ForegroundColor Green -BackgroundColor Black
+        Write-Output "Added font: $Name to directory: $InstallPath"
     }
 
     if($Source) { 
-        if($Source -match "https?://github.com/") { Write-Host "Please use Raw instead" }
-        if(!($Name)) { Write-Host "You need to supply a name"; Break }
+        if($Source -match "https?://github.com/") { Write-Output "Please use Raw instead" }
+        if(!($Name)) { Write-Output "You need to supply a name"; Break }
         (Invoke-WebRequest -Uri $Source ).content | Out-File "$InstallPath\$Name.txt"
-        Write-Host "Added font: $Name to directory: $InstallPath" -ForegroundColor Green -BackgroundColor Black
+        Write-Output "Added font: $Name to directory: $InstallPath"
     }
 }  
 
@@ -271,7 +271,7 @@ Create-Figlet -Download Colossal to download
  | (_) | | || | | | / _| | / / \__ \ |  _| / _` | | '_| |  _| |___| | _|  | | / _` | | | / -_) |  _|
   \__\_\  \_,_| |_| \__| |_\_\ |___/  \__| \__,_| |_|    \__|       |_|   |_| \__, | |_| \___|  \__|
                                                                               |___/               #>
-function QuickStart-Figlet() {
+function QuickStart-Figlet {
 <#
 .Notes
 This was a quick and dirty script to get you started with Show-Figlet quickly.
@@ -299,6 +299,6 @@ QuickStart-Figlet -$InstallPath "C:\FigletFonts"
         $Name = $Link -replace "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/", "" -replace "\.flf", ""
         (Invoke-WebRequest -Uri $Link ).content | Out-File "$InstallPath\$Name.txt" -Force
 
-        Write-Host "Added font: $Name to directory: $InstallPath" -ForegroundColor Green -BackgroundColor Black
+        Write-Output "Added font: $Name to directory: $InstallPath" -ForegroundColor Green -BackgroundColor Black
     }
 }  
