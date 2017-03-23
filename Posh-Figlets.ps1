@@ -216,17 +216,17 @@ function Show-Figlet {
 function Get-Figlets {
 <#
 .Notes
-This was a quick and dirty script. 'Get-Figlet' to get a list of names and 'Get-Figlet -Download $Name' to download the font.
+This was a quick and dirty script. 
 
-https://github.com/patorjk/figlet.js/tree/master/fonts is a good source apart from figlets.org
+https://github.com/patorjk/figlet.js/tree/master/fonts is a good source and figlets.org
 .SYNOPSIS
 Creates a Powershell readable local copy of the figlet font format
 .DESCRIPTION
 Creates a local copy of a figlet font from http://www.figlet.org/
 .EXAMPLE
-Get-Figlet to create a list of fonts
+Get-Figlets -InstallPath "C:\FigletFonts" -Quickstart
 .EXAMPLE
-Get-Figlet -Download Colossal to download
+Get-Figlets -Source https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/ANSI Shadow.flf -Name "ANSI Shadow" -InstallPath "C:\FigletFonts"
 #>
 
     param(
