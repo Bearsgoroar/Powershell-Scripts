@@ -230,18 +230,18 @@ Get-Figlet -Download Colossal to download
 #>
 
     param(
-        [string]$Name,
-        [string]$Source,
-        [switch]$Download,
-        [switch]$QuickStart,
-        [string]$InstallPath = "C:\PSScripts\FigFonts"
+        [Parameter(Mandatory=$true)][string]$Source,
+        [Parameter(Mandatory=$true)][string]$Name,
+        [string]$InstallPath = "C:\PSScripts\FigFonts",
+        [switch]$QuickStart
     )
 
+    if(Test-Path $InstallPath -eq $False) { Write-Output 'InstallPath doesnt exist. Please either change the path in the script or include -InstallPath $Path'  }
 
     if($Source) { 
-        if($Source -match "https?://github.com/") { $Source = $Source -replace "https?://github.com/", "https://raw.githubusercontent.com/" }
-        if(!($Name)) { Write-Output "You need to supply a name"; Break }
+        if($Source -match "https?://github.com/") { Write-Output "Please use Raw instead"; Break }
         (Invoke-WebRequest -Uri $Source ).content | Out-File "$InstallPath\$Name.txt"
+        Write-Output "Added font: $Name to directory: $InstallPath"
     }
 
     if($QuickStart) {
@@ -255,34 +255,7 @@ Get-Figlet -Download Colossal to download
             $Name = $Link -replace "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/", "" -replace "\.flf", ""
             (Invoke-WebRequest -Uri $Link ).content | Out-File "$InstallPath\$Name.txt" -Force
 
-            Write-Output "Added font: $Name to directory: $InstallPath" -ForegroundColor Green -BackgroundColor Black
+            Write-Output "Added font: $Name to directory: $InstallPath"
         }
-    }
-
-    if(!($Download)) {
-        if($Source) { Continue }
-        if($Name) { 
-            $Link = "http://www.figlet.org/fontdb_example.cgi?font=$Name.flf" 
-            (Invoke-WebRequest -Uri $Link).Content -Replace "<.*>", ""
-        }
-
-        else {
-            $Link = "http://www.figlet.org/fontdb.cgi" 
-            (Invoke-WebRequest -Uri $Link).links | Where-Object href -Match "fontdb_example.cgi" | Select-Object innerText
-        }
-    }
-
-    if($Download) {
-        if(!($Name)) { Write-Output "You need to supply a name"; Break }
-        $Link = "http://www.figlet.org/fonts/$Name.flf"
-        (Invoke-WebRequest -Uri $Link).content | Out-File "$InstallPath\$Name.txt"
-        Write-Output "Added font: $Name to directory: $InstallPath"
-    }
-
-    if($Source) { 
-        if($Source -match "https?://github.com/") { Write-Output "Please use Raw instead" }
-        if(!($Name)) { Write-Output "You need to supply a name"; Break }
-        (Invoke-WebRequest -Uri $Source ).content | Out-File "$InstallPath\$Name.txt"
-        Write-Output "Added font: $Name to directory: $InstallPath"
     }
 }
