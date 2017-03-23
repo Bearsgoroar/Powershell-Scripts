@@ -44,6 +44,7 @@ function Show-Figlet {
     DynamicParam {
         ## Font Directory
         $FontDirectory = "C:\PSScripts\FigFonts"
+        if(!(Test-Path $FontDirectory)) { Write-Error -Message "Font folder not found. Please edit the script to set a folder" }
         
         # Set the dynamic parameters' name
         $ParameterName = 'Font'
@@ -98,7 +99,7 @@ function Show-Figlet {
 
         ## Loading Font
         $SelectedFont = (Get-Content "$FontDirectory\$Font.txt")
-        Write-Verbose -Message "Loaded font: $Font"
+        Write-Verbose -Message "Loaded font: $Font from $FontDirectory"
 
         ## Stuffing $SelectedFont into hashtable $FigletArray
         foreach($Line in $SelectedFont) {
@@ -127,12 +128,16 @@ function Show-Figlet {
                 }
 
                 ## Extended fonts above 160
-                {$_ -match "^[0-9][0-9][0-9]  (NO-BREAK SPACE)"} { 
+                {$_ -match "^[0-9][0-9][0-9]  (NO-BREAK SPACE)" -or $ExtendedFonts -eq $True} { 
+                    ## Some figletfonts have notes and things at the bottom instead of more fonts. 
+                    ## Hopefully this avoids fonts -gt 160 triggering on those things.
+                    if($Line -match "^[0-9][0-9][0-9]  (NO-BREAK SPACE)") { $ExtendedFonts = $True }
+                    
                     $CharacterCounter = [int]($_ -replace "  .*", "").trim()
                     Write-Verbose "Found Extended Font: $Line new CharacterCounter number is $CharacterCounter" 
                 }
 
-                ## Adding lines to LetterArray until comes across @@ (End of line)
+                ## Adding lines to $BuildFigletArray until comes across @@ (End of line)
                 default { $BuildFigletArray = $BuildFigletArray + ($Line.replace($HardBlank," ").replace("@", "`n")) }
             }
         }
@@ -208,7 +213,7 @@ function Show-Figlet {
                                                      |___/                 
 #>
     
-function Get-Figlet {
+function Get-Figlets {
 <#
 .Notes
 This was a quick and dirty script. 'Get-Figlet' to get a list of names and 'Get-Figlet -Download $Name' to download the font.
@@ -228,13 +233,30 @@ Get-Figlet -Download Colossal to download
         [string]$Name,
         [string]$Source,
         [switch]$Download,
+        [switch]$QuickStart,
         [string]$InstallPath = "C:\PSScripts\FigFonts"
     )
+
 
     if($Source) { 
         if($Source -match "https?://github.com/") { $Source = $Source -replace "https?://github.com/", "https://raw.githubusercontent.com/" }
         if(!($Name)) { Write-Output "You need to supply a name"; Break }
         (Invoke-WebRequest -Uri $Source ).content | Out-File "$InstallPath\$Name.txt"
+    }
+
+    if($QuickStart) {
+        $Links = @("https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/ANSI Shadow.flf",
+                   "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/Colossal.flf"
+                   "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/Small.flf",
+                   "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/Tengwar.flf"
+                  )
+
+        foreach($Link in $Links) {
+            $Name = $Link -replace "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/", "" -replace "\.flf", ""
+            (Invoke-WebRequest -Uri $Link ).content | Out-File "$InstallPath\$Name.txt" -Force
+
+            Write-Output "Added font: $Name to directory: $InstallPath" -ForegroundColor Green -BackgroundColor Black
+        }
     }
 
     if(!($Download)) {
@@ -263,42 +285,4 @@ Get-Figlet -Download Colossal to download
         (Invoke-WebRequest -Uri $Source ).content | Out-File "$InstallPath\$Name.txt"
         Write-Output "Added font: $Name to directory: $InstallPath"
     }
-}  
-
-
-<# ___           _        _     ___   _                  _           ___   _          _         _   
-  / _ \   _  _  (_)  __  | |__ / __| | |_   __ _   _ _  | |_   ___  | __| (_)  __ _  | |  ___  | |_ 
- | (_) | | || | | | / _| | / / \__ \ |  _| / _` | | '_| |  _| |___| | _|  | | / _` | | | / -_) |  _|
-  \__\_\  \_,_| |_| \__| |_\_\ |___/  \__| \__,_| |_|    \__|       |_|   |_| \__, | |_| \___|  \__|
-                                                                              |___/               #>
-function QuickStart-Figlet {
-<#
-.Notes
-This was a quick and dirty script to get you started with Show-Figlet quickly.
-
-Fonts from patorjks github
-.SYNOPSIS
-Quick start for Show-Figlet
-.DESCRIPTION
-Creates a local copy of a figlet font from patorjks github to get you started quickly
-.EXAMPLE
-QuickStart-Figlet -$InstallPath "C:\FigletFonts"
-#>
-
-    param(
-        [Parameter(Mandatory=$true)][string]$InstallPath
-    )
-
-    $Links = @("https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/ANSI Shadow.flf",
-               "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/Colossal.flf"
-               "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/Small.flf",
-               "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/Tengwar.flf"
-              )
-
-    foreach($Link in $Links) {
-        $Name = $Link -replace "https://raw.githubusercontent.com/patorjk/figlet.js/master/fonts/", "" -replace "\.flf", ""
-        (Invoke-WebRequest -Uri $Link ).content | Out-File "$InstallPath\$Name.txt" -Force
-
-        Write-Output "Added font: $Name to directory: $InstallPath" -ForegroundColor Green -BackgroundColor Black
-    }
-}  
+}
