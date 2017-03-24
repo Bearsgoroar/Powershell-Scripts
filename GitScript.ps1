@@ -16,6 +16,6 @@
             git push 2>&1 | Write-host
             git pull 2>&1 | Write-host
         }
-        default { git $Command 2>&1 | Write-host }
+        default { git $Action 2>&1 | Write-host }
     }
 }
