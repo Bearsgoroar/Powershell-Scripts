@@ -45,7 +45,7 @@ Parts:
 d88P     888 888        8888888        'Y8888P'  'Y888888 888 888  88888#> 
 
 ## Converts a TV Show into the corrosponding ID on themoviedb.org
-function Get-TvShowID2() {
+function Get-TvShowID() {
     param( [Parameter(Mandatory=$true)][string]$Name )
     
     $Apikey = Get-SecretInfo -Name "APIKEY_moviedb"
@@ -81,7 +81,7 @@ function Get-TvShowID2() {
             try { Return $Results.id[0] }
             catch { 
                 $ErrorMessage = $_.Exception.Message
-                Display-LargeText "Incorrect Name?" -Font "Shadow"
+                Show-Figlet "Incorrect Name?" -Font 'ANSI Shadow'
                 Write-Host "Error: $ErrorMessage"
                 Continue
             } 
@@ -148,7 +148,7 @@ function Get-TvShowEpisodeInfo() {
 }
 
 ## Compares Moviedbs seasons/episodes against a local folders then tells you what episodes are missing
-function Find-TvShowMissings() {
+function Find-TvShowMissing() {
     param(
         [Parameter(Mandatory=$False)][string]$Name,
         [Parameter(Mandatory=$False)][string]$ID,
@@ -156,28 +156,32 @@ function Find-TvShowMissings() {
     )
 
     ## Dealing with local directory
-    $LocalList = (Get-ChildItem -Path "$Directory$Name").Name -replace '(\.mp4|\.mkv|\.avi|\.mpg|\.divx|\.wmv|\.3gp)', '' -replace ' - .*', ''# -replace " (1|2)[0-9][0-9][0-9]", ""
-    $LocalArray = {$LocalList}.Invoke()
+    if(Test-Path -Path "$Directory\$Name") {
+        $LocalList = (Get-ChildItem -Path "$Directory$Name").Name -replace '(\.mp4|\.mkv|\.avi|\.mpg|\.divx|\.wmv|\.3gp)', '' -replace ' - .*', ''# -replace " (1|2)[0-9][0-9][0-9]", ""
+        $LocalArray = {$LocalList}.Invoke()
 
-    ## Going through the $LocalArray trying to find dud episodes and removing or combined episodes and expanding them
-    foreach($Line in $LocalArray) {
-        if($Line -notmatch ".*S[0-9][0-9]E[0-9][0-9].*") { 
-            $LocalArray = $LocalArray -ne $Line
-        }
-        if($Line -match ".*S[0-9][0-9]E00.*") { 
-            $LocalArray = $LocalArray -ne $Line 
-        }
+        ## Going through the $LocalArray trying to find dud episodes and removing or combined episodes and expanding them
+        foreach($Line in $LocalArray) {
+            if($Line -notmatch ".*S[0-9][0-9]E[0-9][0-9].*") { 
+                $LocalArray = $LocalArray -ne $Line
+            }
+            if($Line -match ".*S[0-9][0-9]E00.*") { 
+                $LocalArray = $LocalArray -ne $Line 
+            }
       
-        if(($Line -match "(?<start>.*S[0-9][0-9])(?<ep1>E[0-9][0-9])(?<ep2>E[0-9][0-9])(?<therest>.*)") -eq $True) { 
-            $Start = $matches['start']
-            $Ep1 = $matches['ep1']
-            $Ep2 = $matches['ep2']
+            if(($Line -match "(?<start>.*S[0-9][0-9])(?<ep1>E[0-9][0-9])(?<ep2>E[0-9][0-9])(?<therest>.*)") -eq $True) { 
+                $Start = $matches['start']
+                $Ep1 = $matches['ep1']
+                $Ep2 = $matches['ep2']
 
-            $LocalArray += "$Start$Ep1"
-            $LocalArray += "$Start$Ep2"
-            $LocalArray = $LocalArray -ne "$Start$Ep1$Ep2"
+                $LocalArray += "$Start$Ep1"
+                $LocalArray += "$Start$Ep2"
+                $LocalArray = $LocalArray -ne "$Start$Ep1$Ep2"
+            }
         }
     }
+
+    if(!(Test-Path -Path "$Directory\$Name")) { $LocalArray = @() }
 
     ## Dealing with the API
     if(!($ID)) { $Seasons = Get-TvShowSeasonInfo -Name $Name }
@@ -247,6 +251,10 @@ Y88b  d88P Y8b.     888  888 888     Y88b.    888  888 888 888  888 Y88b 888
                                                                      'Y88P'#>
 
 
+function Get-WatchedTorrents() {
+    Get-Content -Path "E:\WatchedTorrents.txt" | ConvertFrom-Json
+}
+
 ## Updates priority based on if the show is over
 #$Priority = @{}
 function Update-WatchedTorrents() {
@@ -254,7 +262,7 @@ function Update-WatchedTorrents() {
         ## Doing some heavy lifting for shows that are finished and I have all the content
         if(((Get-TvShowGeneralInfo -Name $Name).status) -match ("Canceled|Ended")) {
             if((Find-TvShowMissings -Name $Name).Length -eq 0) { 
-                Update-WatchedTorrentsPriority -Name $Name -NewPriority "Complete"
+                Update-WatchedTorrentsPriority -Name $Name -NewPriority "9"
             }
         }
 
@@ -262,9 +270,9 @@ function Update-WatchedTorrents() {
         else {
             $GetPriority = Read-Host "Priority for: $Name"
             switch($GetPriority) {
-                1 { $GetPriority = "High" }
-                2 { $GetPriority = "Medium" }
-                3 { $GetPriority = "Low" }
+                1 { $GetPriority = "1" }
+                2 { $GetPriority = "2" }
+                3 { $GetPriority = "3" }
             }
 
             Update-WatchedTorrentsPriority -Name $Name -NewPriority $GetPriority
@@ -272,11 +280,10 @@ function Update-WatchedTorrents() {
     }
 }
 
-
 function Update-WatchedTorrentsPriority() {
     param(
         [Parameter(Mandatory=$true)][string]$Name,
-        [Parameter(Mandatory=$true)][string][ValidateSet("High", "Medium", "Low", "Complete")]$NewPriority
+        [Parameter(Mandatory=$true)][string][ValidateSet("0", "1", "2", "3", "4", "5", "9")]$NewPriority
     )
 
     $PriorityOldPrevious = $Priority.$Name.Previous
@@ -389,11 +396,7 @@ function Sort-Downloads() {
         [Parameter(Mandatory=$false)][string]$Since
     )
 
-    ## Import Get-Torrent.ps1
-    Import-Module "C:\PSScripts\Autoload\Get-Torrent.ps1" -Force
-
     $date = Get-Date -format yyyy-MM-dd
-    $apikey = "0cfdef6c6f1639a3e095e60119603558"
     $loglocation = "E:\log.txt"
     $defaultsource = "E:\Torrents"
     $tvdestination = "E:\Tv"
@@ -479,11 +482,11 @@ function Sort-Downloads() {
 
                 ## Hopefully saves an API call
                 if($tmdbname -ne $previousname) {
-                    $tmdbid = Get-TvShowID2 -Name $tmdbname #$showsearch
+                    $tmdbid = Get-TvShowID -Name $tmdbname #$showsearch
                     $newshowname = (Get-Culture).TextInfo.ToTitleCase($showname.trim())
                 }
     
-                $episodename = Get-TvShowEpisode -ID $tmdbid -Season $tmdbseason -Episode $tmdbepisode #$episode.name
+                $episodename = (Get-TvShowEpisodeInfo -ID $tmdbid -Season $tmdbseason -Episode $tmdbepisode).name
                 
                 $previousname = $tmdbname
                 $newname = "$newshowname $newseason"
@@ -513,7 +516,7 @@ function Sort-Downloads() {
                 Add-Content $loglocation "           > Newname is: $newname"
 
                 Write-Host "$oldname >> $tvdestination\$newshowname\$newname$extension"
-                Send-TelegramMessage -ToChatID "189580711" -Message "Sorted: $newname"
+                #Send-TelegramMessage -ToChatID "189580711" -Message "Sorted: $newname"
 
                 Move-Item -literalpath $file.fullname -destination "$tvdestination\$newshowname\$newname$extension"
 
@@ -569,7 +572,7 @@ function Start-ProjectArtifact() {
     foreach($TvShow in $Watchlist) {
         #$TvShow = "Marvels Iron Fist"
         $Torrents = Get-TorrentBETA -Name $TvShow
-        $Missing = Find-TvShowMissings -Name "$TvShow"
+        $Missing = Find-TvShowMissing -Name "$TvShow"
 
         foreach($Torrent in $Torrents) {
             $Regex = $Torrent.Episode_Name -match "(?<NameAndSeason>^.*S[0-9]?[0-9].E[0-9]?[0-9]|Season [0-9] Episode [0-9]?[0-9]).*"

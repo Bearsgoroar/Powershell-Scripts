@@ -93,3 +93,30 @@ function Write-Message() {
     if($Type -eq "Load") { Write-Host "  Loaded  " -ForegroundColor White -BackgroundColor Green -NoNewline; Write-Host " $Text " -ForegroundColor White -BackgroundColor Black }
     if($Type -eq "Blank") { Write-Host "  $Prefix  " -ForegroundColor $PrefixColour -BackgroundColor $PrefixBackgroundColour -NoNewline; Write-Host " $Text " -ForegroundColor White -BackgroundColor Black }
 }
+
+function Write-Log {
+    param(
+        [Parameter(Mandatory=$False)][string]$Path,
+        [Parameter(Mandatory=$False)][validateset("Tv", "Telegram", "Test")][string]$Type,
+        [Parameter(Mandatory=$True)][string]$Text,
+        [Parameter(Mandatory=$False)][switch]$RotateLogs
+    )
+
+    #if(!(Test-Path -Path $Path)) { Write-Message -Type Error -Text "Path does not exist $Path" }
+
+    if($RotateLogs) { 
+        New-Item "$Path" -type file
+        Add-Content $loglocation "$date > Created Logfile"
+    }
+
+    switch($Type) {
+        {$_ -match "Tv"} { 
+            #Add-Content -Value "$Text"
+            Add-Content -Path "E:\log.txt" "$date > Oldname is: $oldname"
+            Add-Content -Path "E:\log.txt" "           > Newname is: $newname$extension"
+            Add-Content -Path "E:\log.txt" "           > Maybe junk: $maybejunk"
+        }
+        {$_ -match "Telegram"} { Add-Content -Path "E:\telegram_chatlog.txt" -Value "$Text" }
+        {$_ -match "Test"} { Add-Content -Path "E:\testlog.txt" -Value "$Text" }
+    }
+}

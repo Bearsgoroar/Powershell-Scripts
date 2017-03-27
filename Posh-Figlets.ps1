@@ -38,48 +38,54 @@ function Show-Figlet {
     [CmdletBinding()]
     param(        
         [string]$Text = "Works as Intended!",
-        [string][ValidateScript( { $_ -in [Enum]::GetValues([System.ConsoleColor]) -or $_ -match "(Rainbow|Random|Xmas)"} )]$Colour = "Red",
         [switch]$IgnoreUnsupported
     )
     DynamicParam {
+        ## DynamicParam from https://stackoverflow.com/questions/30111408/powershell-multiple-parameters-for-a-tabexpansion-argumentcompleter
+
         ## Font Directory
         $FontDirectory = "C:\PSScripts\FigFonts"
         if(!(Test-Path $FontDirectory)) { Write-Error -Message "Font folder not found. Please edit the script to set a folder" }
         
-        # Set the dynamic parameters' name
-        $ParameterName = 'Font'
-        
-        # Create the dictionary 
-        $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+        $ParamNames = @('Colour','Font')
 
-        # Create the collection of attributes
-        $AttributeCollection = New-Object System.Collections.ObjectModel.Collection[System.Attribute]
-            
-        # Create and set the parameters' attributes
-        $ParameterAttribute = New-Object System.Management.Automation.ParameterAttribute
-        #$ParameterAttribute.Mandatory = $true
-        $ParameterAttribute.Position = 3
+        #Create Param Dictionary
+        $ParamDictionary = new-object -Type System.Management.Automation.RuntimeDefinedParameterDictionary
 
-        # Add the attributes to the attributes collection
-        $AttributeCollection.Add($ParameterAttribute)
+        ForEach($Name in $ParamNames){
+            #Create a container for the new parameter's various attributes, like Manditory, HelpMessage, etc that usually goes in the [Parameter()] part
+            $ParamAttribCollecton = new-object -Type System.Collections.ObjectModel.Collection[System.Attribute]
 
-        # Generate and set the ValidateSet 
-        $arrSet = Get-ChildItem -Path $FontDirectory | Select-Object -ExpandProperty Basename
-        $ValidateSetAttribute = New-Object System.Management.Automation.ValidateSetAttribute($arrSet)
+            #Create each attribute
+            $ParamAttrib = new-object System.Management.Automation.ParameterAttribute
+            $ParamAttrib.Mandatory = $False
 
-        # Add the ValidateSet to the attributes collection
-        $AttributeCollection.Add($ValidateSetAttribute)
+            #Create ValidationSet to make tab-complete work
+            if($i -le 0) { $arrSet = [Enum]::GetValues([System.ConsoleColor]) + "Rainbow" + "Xmas" + "Random" }
+            if($i -ge 1) { $arrSet = Get-ChildItem -Path $FontDirectory | Select-Object -ExpandProperty Basename }
+            $ParamValSet = New-Object -type System.Management.Automation.ValidateSetAttribute($arrSet)
 
-        # Create and return the dynamic parameter
-        $RuntimeParameter = New-Object System.Management.Automation.RuntimeDefinedParameter($ParameterName, [string], $AttributeCollection)
-        $RuntimeParameterDictionary.Add($ParameterName, $RuntimeParameter)
-        return $RuntimeParameterDictionary
+            #Add attributes and validationset to the container
+            $ParamAttribCollecton.Add($ParamAttrib)
+            $ParamAttribCollecton.Add($ParamValSet)
+
+            #Create the actual parameter,  then add it to the Param Dictionary
+            $MyParam = new-object -Type System.Management.Automation.RuntimeDefinedParameter($Name, [String], $ParamAttribCollecton)
+            $ParamDictionary.Add($Name, $MyParam)
+            $i++
+        }
+
+        #Return the param dictionary so the function can add the parameters to itself
+        return $ParamDictionary
     }
 
     begin {
         ## Setting font from dynparam if supplied otherwise to ANSI-Shadow
         if($PsBoundParameters["Font"]) { $Font = $PsBoundParameters["Font"] }
         if(!($PsBoundParameters["Font"])) { $Font = "ANSI Shadow" }
+
+        if($PsBoundParameters["Colour"]) { $Colour = $PsBoundParameters["Colour"] }
+        if(!($PsBoundParameters["Colour"])) { $Colour = "Green" }
 
         ## Custom Colour Arrays
         $RainbowArray = @("DarkRed","Red","Yellow","Green","Blue","Cyan","Magenta","DarkMagenta", "DarkRed", 
@@ -112,10 +118,9 @@ function Show-Figlet {
                 {$_ -match "flf2."} {                 
                     $HardBlank = ($Line -split " ")[0] -replace "flf2.", ""
                     $FontHeight = ($Line -split " ")[1]
-                    #$FontWidth = ($Line -split " ")[3] - 2
                     $SkipLines = ($Line -split " ")[5]
                     
-                    Write-Verbose -Message "Compare lines:`n $Line `nBlank Character: $HardBlank, Font Height: $FontHeight, Font Width: $FontWidth, Comment Length: $SkipLines"
+                    Write-Verbose -Message "Compare lines:`n $Line `nBlank Character: $HardBlank, Font Height: $FontHeight, Comment Length: $SkipLines"
                 }
 
                 ## @@ is end of line, combining together default with last line and adding to hashtable
@@ -206,11 +211,11 @@ function Show-Figlet {
 }
 
 
-<#                        _                  __   _          _         _   
-  __   _ _   ___   __ _  | |_   ___   ___   / _| (_)  __ _  | |  ___  | |_ 
- / _| | '_| / -_) / _` | |  _| / -_) |___| |  _| | | / _` | | | / -_) |  _|
- \__| |_|   \___| \__,_|  \__| \___|       |_|   |_| \__, | |_| \___|  \__|
-                                                     |___/                 
+<# ___         _           ___   _          _         _        
+  / __|  ___  | |_   ___  | __| (_)  __ _  | |  ___  | |_   ___
+ | (_ | / -_) |  _| |___| | _|  | | / _` | | | / -_) |  _| (_-<
+  \___| \___|  \__|       |_|   |_| \__, | |_| \___|  \__| /__/
+                                    |___/                      
 #>
     
 function Get-Figlets {
