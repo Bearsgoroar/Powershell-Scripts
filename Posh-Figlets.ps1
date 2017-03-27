@@ -133,11 +133,10 @@ function Show-Figlet {
                 }
 
                 ## Extended fonts above 160
-                {$_ -match "^[0-9][0-9][0-9]  (NO-BREAK SPACE)" -or $ExtendedFonts -eq $True} { 
+                {$_ -match "^[0-9][0-9][0-9]  (NO-BREAK|INVERTED|CENT|POUND|CURRENCY|YEN|BROKEN|SECTION|DIAERESIS|COPYRIGHT|FEMININE|LEFT-POINTING|NOT SIGN|SOFT|REGISTERED|MACRON|DEGREE|PLUS|SUPERSCRIPT|ACUTE|MICRO|PILCROW|MIDDLE|CEDILLA|MASCULINE|RIGHT-POINTING|VULGAR|LATIN)"} { 
                     ## Some figletfonts have notes and things at the bottom instead of more fonts. 
                     ## Hopefully this avoids fonts -gt 160 triggering on those things.
-                    if($Line -match "^[0-9][0-9][0-9]  (NO-BREAK SPACE)") { $ExtendedFonts = $True }
-                    
+
                     $CharacterCounter = [int]($_ -replace "  .*", "").trim()
                     Write-Verbose "Found Extended Font: $Line new CharacterCounter number is $CharacterCounter" 
                 }
