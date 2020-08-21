@@ -1,0 +1,48 @@
+## Quick and dirty little converter
+## Converts Text to Ascii to Binary and replaces 1 with A and 0 with a
+## and allows you to convert it back.
+
+function ConvertTo-AaAaa {
+    param(
+        [string]$Text = "Example text :)"
+    )
+
+    begin {
+        $Output = $Null
+    }
+
+    process {
+        $Output = foreach($Item in $Text.ToCharArray()) {
+            $Ascii = [int][char]$Item
+
+            $Binary = [convert]::ToString($Ascii,2).PadLeft(8,'0')
+            $Binary -replace "1", "A" -replace "0", "a"
+        } 
+
+        $Output -join ""
+    }
+}
+
+
+
+function ConvertFrom-AaAaa {
+    param(
+        [string]$Text = "aAaaaAaAaAAAAaaaaAAaaaaAaAAaAAaAaAAAaaaaaAAaAAaaaAAaaAaAaaAaaaaaaAaAaAaaaAAaaAaAaAAAAaaaaAAAaAaaaaAaaaaaaaAAAaAaaaAaAaaA"
+    )
+
+    begin {}
+
+    process {
+        $Output = foreach($Item in ($Text -split '(\w{8})' | ? {$_}) -creplace "A", "1" -creplace "a", "0") {
+            $Binary = [convert]::ToInt32("$Item",2)
+            
+            [char]$Binary
+        }
+
+        $Output -join ""
+    }
+}
+    
+
+
+
