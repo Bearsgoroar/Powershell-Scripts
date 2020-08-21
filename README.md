@@ -17,7 +17,6 @@ Put together by me with the heavy lifting parts written by [/u/aXenoWhat](https:
 ## AaAaa
 Allows you to convert text into a string of AaAaaAa's
 
-## Contains:
+### Contains:
 #### ConvertTo-AaAaa
-
 #### ConvertFrom-AaAaa
