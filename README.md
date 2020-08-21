@@ -14,3 +14,10 @@ Put together by me with the heavy lifting parts written by [/u/aXenoWhat](https:
   - Displays figlet in powershell console
   ![My image](http://puu.sh/uU716.png)
 
+## AaAaa
+Allows you to convert text into a string of AaAaaAa's
+
+## Contains:
+#### ConvertTo-AaAaa
+
+#### ConvertFrom-AaAaa
