@@ -1,0 +1,77 @@
+Function Start-Program {
+    [CmdletBinding()]
+    param()
+    DynamicParam {
+        ## DynamicParam from https://stackoverflow.com/questions/30111408/powershell-multiple-parameters-for-a-tabexpansion-argumentcompleter
+
+        ## Generate our Program list
+        $ProgramList = foreach ($App in Get-StartApps) {
+            if($App.AppID -notmatch "^Microsoft\.|steam://rungame|\.(exe|msi)$") { Continue }
+        
+            $TopLevel = ($App.AppID -split "\\")[0]
+            $Location = switch($TopLevel) {
+                "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}" { $App.AppID -replace $_, "$env:SystemRoot\system" }
+                "{6D809377-6AF0-444B-8957-A3773F02200E}" { $App.AppID -replace $_, $env:ProgramFiles }
+                "{7C5A40EF-A0FB-4BFC-874A-C0F2E0B9FA8E}" { $App.AppID -replace $_, ${env:ProgramFiles(x86)} }
+                "{D65231B0-B2F1-4857-A4CE-A8E7C6EA7D27}" { $App.AppID -replace $_, "$env:SystemRoot\system32" }
+                "{F38BF404-1D43-42F2-9305-67DE0B28FC23}" { $App.AppID -replace $_, $env:SystemRoot }
+                {$_ -match "Microsoft\."}                { $App.AppID -replace $_, "explorer.exe shell:appsFolder\$($App.AppID)" }
+                default { $App.AppID }
+            }
+        
+            [pscustomobject]@{
+                Name = $App.name
+                Location = $Location
+            }
+        }
+        
+        #Create Param Dictionary
+        $ParamDictionary = new-object -Type System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        $Name = "App"
+
+        #Create a container for the new parameter's various attributes, like Manditory, HelpMessage, etc that usually goes in the [Parameter()] part
+        $ParamAttribCollecton = new-object -Type System.Collections.ObjectModel.Collection[System.Attribute]
+
+        #Create each attribute
+        $ParamAttrib = new-object System.Management.Automation.ParameterAttribute
+        $ParamAttrib.Mandatory = $True
+        $ParamAttrib.Position = 0
+
+        #Create ValidationSet to make tab-complete work
+        $arrSet = $ProgramList.Name
+        $ParamValSet = New-Object -type System.Management.Automation.ValidateSetAttribute($arrSet)
+
+        #Add attributes and validationset to the container
+        $ParamAttribCollecton.Add($ParamAttrib)
+        $ParamAttribCollecton.Add($ParamValSet)
+
+        #Create the actual parameter,  then add it to the Param Dictionary
+        $MyParam = new-object -Type System.Management.Automation.RuntimeDefinedParameter($Name, [String], $ParamAttribCollecton)
+        $ParamDictionary.Add($Name, $MyParam)
+
+        #Return the param dictionary so the function can add the parameters to itself
+        return $ParamDictionary
+    }
+    begin {
+        ## Setting UPN from dynparam
+        $Data = $PsBoundParameters["App"]
+
+    }
+    process {
+        $Launch = $ProgramList | Where { $_.name -eq $Data }
+
+        Write-Host "Launching " -NoNewline
+        Write-Host $Launch.Name -NoNewline -ForegroundColor Green
+        Write-Host " from path " -NoNewline
+        Write-Host $Launch.Location -NoNewline -ForegroundColor Green
+
+        if($Launch.Location -match "explorer.exe") {
+            Start-Process "explorer.exe" -ArgumentList $($Launch.Location -replace "explorer.exe ")
+        }
+        
+        else {
+            Start-Process $Launch.Location
+        }
+    }
+}
