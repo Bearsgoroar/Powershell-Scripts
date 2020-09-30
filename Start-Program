@@ -46,10 +46,10 @@ Function Start-Program {
         $Launch = $ProgramList | Where { $_.name -eq $Data }
 
         ## Just some cruft so you see what it's doing
-        Write-Host "Launching " -NoNewline
+        Write-Host "Launching " -NoNewline -ForegroundColor DarkGray
         Write-Host $Launch.Name -NoNewline -ForegroundColor Green
-        Write-Host " from GUID " -NoNewline
-        Write-Host $($Launch.AppID -replace "shell:appsFolder\\") -NoNewline -ForegroundColor Green
+        Write-Host " from GUID " -NoNewline -ForegroundColor DarkGray
+        Write-Host $Launch.AppID -NoNewline -ForegroundColor Green
 
         ## Uses explorer to launch everything as it resolves the GUIDs itself
         ## Should really be wrapped in a try/catch but this entire thing was "see if I can"
