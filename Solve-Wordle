@@ -1,0 +1,86 @@
+Function Solve-Wordle {
+    param (
+        $DudLetters,
+        $PossibleLetters1,
+        $PossibleLetters2,
+        $PossibleLetters3,
+        $PossibleLetters4,
+        $PossibleLetters5,
+        $Match1,
+        $Match2,
+        $Match3,
+        $Match4,
+        $Match5
+    )
+
+    begin { 
+        ## I've stolen the word list download below from https://github.com/bonneyt/PSWordleSolver
+        $js = curl -Uri 'https://www.nytimes.com/games/wordle/main.bd4cb59c.js'
+
+        #word list is found within the variable Ma.  isolate and extract to $js 
+        $js = ($js.ParsedHtml.body.innerText -split "var Ma=\[")[1]
+        $js = ($js -split "\]")[0]
+
+        #parse the word list, usisng comma as the delimmiter and remove the double quotes
+        $WordArray = $js.Split(',') -replace """"
+    }
+
+    process {
+    
+        $LetterLocationHash = @{
+            Possible0 = [array]$(if($Match1 -match "[A-Z]") { $Match1 }; $Possible1 )
+            Possible1 = [array]$(if($Match2 -match "[A-Z]") { $Match2 }; $Possible2 )
+            Possible2 = [array]$(if($Match3 -match "[A-Z]") { $Match3 }; $Possible3 )
+            Possible3 = [array]$(if($Match4 -match "[A-Z]") { $Match4 }; $Possible4 )
+            Possible4 = [array]$(if($Match5 -match "[A-Z]") { $Match5 }; $Possible5 )
+            Match0    = $Match1
+            Match1    = $Match2
+            Match2    = $Match3
+            Match3    = $Match4
+            Match4    = $Match5
+        }
+
+        $Data = foreach($Word in $WordArray) {
+            ## Skip Words that have letters in them that don't appear
+            if($DudLetters.ToCharArray() -contains $Word[0]) { Continue }
+            if($DudLetters.ToCharArray() -contains $Word[1]) { Continue }
+            if($DudLetters.ToCharArray() -contains $Word[2]) { Continue }
+            if($DudLetters.ToCharArray() -contains $Word[3]) { Continue }
+            if($DudLetters.ToCharArray() -contains $Word[4]) { Continue }
+
+            ## Removing words (If you used "RAISED" as a guess and the E came back yellow it will ignore all words ending in E)
+            $AllPossible = @($LetterLocationHash.possible0, $LetterLocationHash.possible1, $LetterLocationHash.possible2, $LetterLocationHash.possible3, $LetterLocationHash.possible4)
+            if($LetterLocationHash.possible0 -eq $Null -and $AllPossible -contains $Word[0]) { Continue }
+            if($LetterLocationHash.possible1 -eq $Null -and $AllPossible -contains $Word[1]) { Continue }
+            if($LetterLocationHash.possible2 -eq $Null -and $AllPossible -contains $Word[2]) { Continue }
+            if($LetterLocationHash.possible3 -eq $Null -and $AllPossible -contains $Word[3]) { Continue }
+            if($LetterLocationHash.possible4 -eq $Null -and $AllPossible -contains $Word[4]) { Continue }
+
+            ## Removing words (If have a letter in the correct place and a $WordArray word has a different letter in it's place)
+            if($LetterLocationHash.Match0 -eq $True -and $LetterLocationHash.Match0 -ne $Word[0]) { Continue }
+            if($LetterLocationHash.Match1 -eq $True -and $LetterLocationHash.Match1 -ne $Word[1]) { Continue }
+            if($LetterLocationHash.Match2 -eq $True -and $LetterLocationHash.Match2 -ne $Word[2]) { Continue }
+            if($LetterLocationHash.Match3 -eq $True -and $LetterLocationHash.Match3 -ne $Word[3]) { Continue }
+            if($LetterLocationHash.Match4 -eq $True -and $LetterLocationHash.Match4 -ne $Word[4]) { Continue }
+
+            ## Narrow search
+            if($LetterLocationHash.Possible0 -contains $Word[0]) { $Word } 
+            if($LetterLocationHash.Possible1 -contains $Word[1]) { $Word } 
+            if($LetterLocationHash.Possible2 -contains $Word[2]) { $Word } 
+            if($LetterLocationHash.Possible3 -contains $Word[3]) { $Word } 
+            if($LetterLocationHash.Possible4 -contains $Word[4]) { $Word } 
+
+            ## Add the word if it matches the letter in the correct place
+            if($LetterLocationHash.Match0 -eq $Word[0]) { $Word } 
+            if($LetterLocationHash.Match1 -eq $Word[1]) { $Word } 
+            if($LetterLocationHash.Match2 -eq $Word[2]) { $Word } 
+            if($LetterLocationHash.Match3 -eq $Word[3]) { $Word } 
+            if($LetterLocationHash.Match4 -eq $Word[4]) { $Word }
+
+            ## This is here to solve an edge case where your first guess is completely incorrect
+            $Word
+        }
+
+        $Data | Group-Object | Select Count, Name | Sort -property Count
+    }
+}
